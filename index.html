@@ -63,10 +63,10 @@
 <body class="bg-slate-100 font-sans p-4 max-w-md mx-auto text-slate-800 pb-20">
 
   <!-- VISTA 0: AUTENTICACIÓN (LOGIN / REGISTRO) -->
-  <div id="vistaAuth" class="my-6 space-y-4">
+  <div id="vistaAuth" class="my-6">
     
-    <!-- Tarjeta de Login / Registro -->
-    <div class="bg-white p-6 rounded-3xl shadow-lg border border-slate-200">
+    <!-- Tarjeta Principal de Login / Registro (Recuadro Blanco) -->
+    <div class="bg-white p-6 rounded-3xl shadow-lg border border-slate-200 space-y-4">
       <h1 class="text-2xl font-black text-slate-800 text-center mb-1">Mi Quincena</h1>
       <p class="text-xs text-slate-500 text-center mb-6">Inicia sesión para acceder a tu control financiero privado</p>
 
@@ -87,22 +87,25 @@
           Crear Cuenta Nueva
         </button>
       </div>
-    </div>
 
-    <!-- BOTÓN Y TARJETA PASO A PASO -->
-    <div class="bg-slate-200/80 p-4 rounded-2xl border border-slate-300">
-      <button onclick="togglePasoAPaso()" class="w-full flex justify-between items-center text-xs font-bold text-slate-700 outline-none">
-        <span>📖 Guía Paso a Paso para Usar la App</span>
-        <span id="iconoPaso">▼</span>
-      </button>
+      <!-- GUÍA PASO A PASO DENTRO DEL RECUADRO BLANCO -->
+      <div class="pt-3 border-t border-slate-100 mt-4">
+        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+          <button onclick="togglePasoAPaso()" class="w-full flex justify-between items-center text-xs font-bold text-slate-700 outline-none">
+            <span>📖 Guía Paso a Paso para Usar la App</span>
+            <span id="iconoPaso">▼</span>
+          </button>
 
-      <div id="contenidoPasoAPaso" class="hidden mt-3 pt-3 border-t border-slate-300 text-xs space-y-2 text-slate-600">
-        <p><strong>1. Crear Cuenta / Iniciar Sesión:</strong> Ingresa tu correo y una contraseña para sincronizar tus datos de forma privada.</p>
-        <p><strong>2. Registrar Quincena:</strong> En la pestaña <em>Actual</em>, ingresa tu monto de quincena y lo que deseas destinar a ahorro.</p>
-        <p><strong>3. Agregar Gastos:</strong> Añade tus facturas, deudas o compras quincenales para calcular automáticamente tu disponible.</p>
-        <p><strong>4. Guardar Historial:</strong> Presiona el botón 💾 <em>Guardar</em> en la parte superior para almacenar tu quincena y reiniciar el tablero.</p>
-        <p><strong>5. Reportes PDF y Gráficas:</strong> Pásate a la pestaña <em>Historial / Gráfica</em> para consultar métricas o descargar tu extracto impreso.</p>
+          <div id="contenidoPasoAPaso" class="hidden mt-3 pt-3 border-t border-slate-200 text-xs space-y-2 text-slate-600">
+            <p><strong>1. Crear Cuenta / Iniciar Sesión:</strong> Ingresa tu correo y una contraseña para sincronizar tus datos de forma privada.</p>
+            <p><strong>2. Registrar Quincena:</strong> En la pestaña <em>Actual</em>, ingresa tu monto de quincena y lo que deseas destinar a ahorro.</p>
+            <p><strong>3. Agregar Gastos:</strong> Añade tus facturas, deudas o compras quincenales para calcular automáticamente tu disponible.</p>
+            <p><strong>4. Guardar Historial:</strong> Presiona el botón 💾 <em>Guardar</em> en la parte superior para almacenar tu quincena y reiniciar el tablero.</p>
+            <p><strong>5. Reportes PDF y Gráficas:</strong> Pásate a la pestaña <em>Historial / Gráfica</em> para consultar métricas o descargar tu extracto impreso.</p>
+          </div>
+        </div>
       </div>
+
     </div>
 
   </div>

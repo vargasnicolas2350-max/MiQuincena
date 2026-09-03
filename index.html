@@ -14,6 +14,21 @@
   <meta name="apple-mobile-web-app-title" content="Mi Quincena">
   <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2845/2845873.png">
 
+  <!-- Estilos de Respaldo Nativos (Evita que la pantalla se desconfigure si falla Tailwind) -->
+  <style>
+    .hidden {
+      display: none !important;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f1f5f9;
+      color: #1e293b;
+    }
+    input {
+      font-size: 16px !important; /* Previene el zoom automático molesto en iOS/Safari */
+    }
+  </style>
+
   <!-- Scripts: Tailwind CSS, Chart.js, HTML2PDF y SDKs de Firebase v10 -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>

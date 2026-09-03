@@ -20,7 +20,7 @@
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Reemplaza los valores entre comillas con las claves copiadas de tu pantalla de Firebase
+    // Coloca tus claves de Firebase aquí
     const firebaseConfig = {
       apiKey: "AIzaSyDH3GpSoYP0t9xcBJHMLRyUUFFtqSRYKx4",
       authDomain: "miquincena-512f3.firebaseapp.com",
@@ -82,7 +82,7 @@
     </div>
   </div>
 
-  <!-- APLICACIÓN PRINCIPAL (PRIVADA) -->
+  <!-- APLICACIÓN PRINCIPAL -->
   <div id="appPrincipal" class="hidden">
     <!-- Encabezado -->
     <div class="flex justify-between items-center mb-4 pt-2">
@@ -129,7 +129,7 @@
 
         <div class="grid grid-cols-2 gap-4 border-t border-slate-800 pt-4">
           <div>
-            <p class="text-xs text-slate-400 font-medium mb-0.5">Total Deudas</p>
+            <p class="text-xs text-slate-400 font-medium mb-0.5">Total Gastos</p>
             <p id="totalGastos" class="text-xl font-extrabold text-red-400">$0</p>
           </div>
           <div>
@@ -140,7 +140,7 @@
       </div>
 
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 mb-6">
-        <h2 class="text-sm font-bold text-slate-700 mb-3">➕ Agregar Deuda / Gasto</h2>
+        <h2 class="text-sm font-bold text-slate-700 mb-3">➕ Agregar Gasto / Deuda</h2>
         <div class="space-y-3">
           <input type="text" id="nombreGasto" placeholder="Descripción (Ej: Tarjeta, Arriendo)" class="w-full p-2.5 text-sm border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-slate-800">
           <div class="flex gap-2">
@@ -151,8 +151,8 @@
       </div>
 
       <div class="mb-3 flex justify-between items-center">
-        <h3 class="text-sm font-bold text-slate-700">Deudas Registradas</h3>
-        <span id="contadorPagados" class="text-xs font-semibold bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">0/0 Pagados</span>
+        <h3 class="text-sm font-bold text-slate-700">Gastos Registrados</h3>
+        <span id="contadorGastos" class="text-xs font-semibold bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">0 Registrados</span>
       </div>
       <div class="space-y-2.5" id="listaGastos"></div>
     </div>
@@ -218,7 +218,7 @@
           <tr style="background: #0f172a; color: white;">
             <th style="padding: 6px;">Fecha</th>
             <th style="padding: 6px;">Ingreso</th>
-            <th style="padding: 6px;">Deudas</th>
+            <th style="padding: 6px;">Gastos</th>
             <th style="padding: 6px;">Ahorro</th>
             <th style="padding: 6px; text-align: right;">Disponible</th>
           </tr>
@@ -314,28 +314,23 @@
       lista.innerHTML = '';
 
       if (gastos.length === 0) {
-        lista.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs">Sin deudas registradas.</div>`;
+        lista.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs">Sin gastos registrados.</div>`;
       }
 
-      let pagadosCount = 0;
       gastos.forEach((gasto, index) => {
-        if (gasto.pagado) pagadosCount++;
         const item = document.createElement('div');
-        item.className = `flex items-center justify-between p-3.5 rounded-2xl border ${gasto.pagado ? 'bg-emerald-50/60 border-emerald-200' : 'bg-white border-slate-200 shadow-sm'}`;
+        item.className = 'flex items-center justify-between p-3.5 rounded-2xl border bg-white border-slate-200 shadow-sm';
         item.innerHTML = `
-          <div class="flex items-center gap-3">
-            <input type="checkbox" ${gasto.pagado ? 'checked' : ''} onchange="togglePago(${index})" class="w-5 h-5 accent-emerald-600 rounded">
-            <div>
-              <p class="text-sm font-bold ${gasto.pagado ? 'line-through text-slate-400' : 'text-slate-800'}">${gasto.nombre}</p>
-              <p class="text-xs font-semibold ${gasto.pagado ? 'text-emerald-700' : 'text-slate-500'}">$${Number(gasto.monto).toLocaleString()}</p>
-            </div>
+          <div>
+            <p class="text-sm font-bold text-slate-800">${gasto.nombre}</p>
+            <p class="text-xs font-semibold text-slate-500">$${Number(gasto.monto).toLocaleString()}</p>
           </div>
           <button onclick="eliminarGasto(${index})" class="text-slate-300 hover:text-red-500 font-bold p-1">✕</button>
         `;
         lista.appendChild(item);
       });
 
-      document.getElementById('contadorPagados').innerText = `${pagadosCount}/${gastos.length} Pagados`;
+      document.getElementById('contadorGastos').innerText = `${gastos.length} Registrados`;
       calcularTotales();
       if (sincro) sincronizarNube();
     }
@@ -344,16 +339,11 @@
       const nombre = document.getElementById('nombreGasto').value.trim();
       const monto = parseFloat(document.getElementById('montoGasto').value);
       if (nombre && !isNaN(monto) && monto > 0) {
-        gastos.push({ nombre, monto, pagado: false });
+        gastos.push({ nombre, monto });
         document.getElementById('nombreGasto').value = '';
         document.getElementById('montoGasto').value = '';
         guardarYRenderizar();
       }
-    }
-
-    function togglePago(index) {
-      gastos[index].pagado = !gastos[index].pagado;
-      guardarYRenderizar();
     }
 
     function eliminarGasto(index) {
@@ -419,7 +409,7 @@
           </div>
           <div class="flex justify-between text-slate-600">
             <span class="text-sky-600 font-semibold">🐖 Ahorro: $${item.ahorro.toLocaleString()}</span>
-            <span class="text-red-500 font-semibold">Deudas: $${item.gastos.toLocaleString()}</span>
+            <span class="text-red-500 font-semibold">Gastos: $${item.gastos.toLocaleString()}</span>
             <span class="text-emerald-600 font-bold">Libre: $${item.disponible.toLocaleString()}</span>
           </div>
         `;
@@ -437,7 +427,7 @@
         data: {
           labels: historial.map(h => h.fecha),
           datasets: [
-            { label: 'Deudas', data: historial.map(h => h.gastos), backgroundColor: '#f87171', borderRadius: 4 },
+            { label: 'Gastos', data: historial.map(h => h.gastos), backgroundColor: '#f87171', borderRadius: 4 },
             { label: 'Ahorro', data: historial.map(h => h.ahorro), backgroundColor: '#38bdf8', borderRadius: 4 },
             { label: 'Libre', data: historial.map(h => h.disponible), backgroundColor: '#34d399', borderRadius: 4 }
           ]

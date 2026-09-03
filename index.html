@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Control Quincenal</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- Scripts: Tailwind CSS, Chart.js, HTML2PDF y SDKs de Firebase v10 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // Reemplaza los valores entre comillas con las claves copiadas de tu pantalla de Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyDH3GpSoYP0t9xcBJHMLRyUUFFtqSRYKx4",
+      authDomain: "miquincena-512f3.firebaseapp.com",
+      projectId: "miquincena-512f3",
+      storageBucket: "miquincena-512f3.firebasestorage.app",
+      messagingSenderId: "141149344834",
+      appId: "1:141149344834:web:b514de4883ce0b28cc89db"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    window.auth = auth;
+    window.db = db;
+    window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+    window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+    window.signOut = signOut;
+    window.doc = doc;
+    window.setDoc = setDoc;
+    window.getDoc = getDoc;
+
+    // Escucha de estado de sesión
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        document.getElementById('vistaAuth').classList.add('hidden');
+        document.getElementById('appPrincipal').classList.remove('hidden');
+        await cargarDatosNube();
+      } else {
+        document.getElementById('vistaAuth').classList.remove('hidden');
+        document.getElementById('appPrincipal').classList.add('hidden');
+      }
+    });
+  </script>
+</head>
+<body class="bg-slate-100 font-sans p-4 max-w-md mx-auto text-slate-800 pb-20">
+
+  <!-- VISTA 0: AUTENTICACIÓN (LOGIN / REGISTRO) -->
+  <div id="vistaAuth" class="my-10 bg-white p-6 rounded-3xl shadow-lg border border-slate-200">
+    <h1 class="text-2xl font-black text-slate-800 text-center mb-1">Mi Quincena</h1>
+    <p class="text-xs text-slate-500 text-center mb-6">Inicia sesión para proteger tus datos privados</p>
+
+    <div class="space-y-4">
+      <div>
+        <label class="text-xs font-bold text-slate-600">Correo Electrónico</label>
+        <input type="email" id="authEmail" class="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-slate-800 outline-none">
+      </div>
+      <div>
+        <label class="text-xs font-bold text-slate-600">Contraseña</label>
+        <input type="password" id="authPassword" class="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-slate-800 outline-none">
+      </div>
+
+      <button onclick="login()" class="w-full bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition">
+        Iniciar Sesión
+      </button>
+      <button onclick="registro()" class="w-full bg-slate-200 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-300 transition">
+        Crear Cuenta Nueva
+      </button>
+    </div>
+  </div>
+
+  <!-- APLICACIÓN PRINCIPAL (PRIVADA) -->
+  <div id="appPrincipal" class="hidden">
+    <!-- Encabezado -->
+    <div class="flex justify-between items-center mb-4 pt-2">
+      <div>
+        <h1 class="text-2xl font-black text-slate-800 tracking-tight">Mi Quincena</h1>
+        <p class="text-xs text-slate-500">Control Personal Privado</p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="cerrarQuincena()" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-emerald-700 transition">
+          💾 Guardar
+        </button>
+        <button onclick="cerrarSesion()" class="text-xs bg-slate-200 text-slate-600 px-2.5 py-1.5 rounded-xl font-bold hover:bg-slate-300 transition" title="Cerrar sesión">
+          🚪
+        </button>
+      </div>
+    </div>
+
+    <!-- Menú Tabs -->
+    <div class="flex bg-slate-200 p-1 rounded-xl mb-5 text-xs font-bold text-slate-600">
+      <button id="tabActual" onclick="cambiarVista('actual')" class="w-1/2 py-2 rounded-lg bg-white shadow text-slate-800 transition">Actual</button>
+      <button id="tabHistorial" onclick="cambiarVista('historial')" class="w-1/2 py-2 rounded-lg transition text-slate-500">Historial / Gráfica</button>
+    </div>
+
+    <!-- VISTA 1: QUINCENA ACTUAL -->
+    <div id="vistaActual">
+      <div class="bg-slate-900 text-white rounded-3xl p-6 mb-6 shadow-xl">
+        <div class="mb-4">
+          <label class="text-xs uppercase tracking-wider text-slate-400 font-bold block mb-1">Monto de la Quincena</label>
+          <div class="relative flex items-center">
+            <span class="absolute left-3 text-xl font-bold text-slate-400">$</span>
+            <input type="number" id="ingreso" placeholder="0" oninput="calcularTotales(); sincronizarNube();" class="w-full bg-slate-800 text-white font-bold text-2xl rounded-xl pl-8 pr-3 py-2.5 outline-none border border-slate-700">
+          </div>
+        </div>
+        
+        <div class="mb-4 pt-2 border-t border-slate-800">
+          <label class="text-xs text-sky-400 font-bold flex items-center gap-1 mb-1">
+            <span>🐖</span> Ahorro Quincenal
+          </label>
+          <div class="relative flex items-center">
+            <span class="absolute left-3 text-lg font-bold text-slate-400">$</span>
+            <input type="number" id="ahorro" placeholder="0" oninput="calcularTotales(); sincronizarNube();" class="w-full bg-slate-800 text-sky-300 font-bold text-xl rounded-xl pl-8 pr-3 py-2 outline-none border border-slate-700">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 border-t border-slate-800 pt-4">
+          <div>
+            <p class="text-xs text-slate-400 font-medium mb-0.5">Total Deudas</p>
+            <p id="totalGastos" class="text-xl font-extrabold text-red-400">$0</p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 font-medium mb-0.5">Libre / Disponible</p>
+            <p id="saldoDisponible" class="text-xl font-extrabold text-emerald-400">$0</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 mb-6">
+        <h2 class="text-sm font-bold text-slate-700 mb-3">➕ Agregar Deuda / Gasto</h2>
+        <div class="space-y-3">
+          <input type="text" id="nombreGasto" placeholder="Descripción (Ej: Tarjeta, Arriendo)" class="w-full p-2.5 text-sm border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-slate-800">
+          <div class="flex gap-2">
+            <input type="number" id="montoGasto" placeholder="Monto" class="w-full p-2.5 text-sm border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-slate-800">
+            <button onclick="agregarGasto()" class="bg-slate-900 text-white px-5 py-2.5 text-sm font-bold rounded-xl hover:bg-slate-800 transition">Guardar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-3 flex justify-between items-center">
+        <h3 class="text-sm font-bold text-slate-700">Deudas Registradas</h3>
+        <span id="contadorPagados" class="text-xs font-semibold bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">0/0 Pagados</span>
+      </div>
+      <div class="space-y-2.5" id="listaGastos"></div>
+    </div>
+
+    <!-- VISTA 2: HISTORIAL Y GRÁFICO -->
+    <div id="vistaHistorial" class="hidden space-y-6">
+      <div class="flex justify-between items-center">
+        <h3 class="text-sm font-bold text-slate-700">Resumen Histórico</h3>
+        <button onclick="descargarExtractoPDF()" class="text-xs bg-slate-900 text-white px-3 py-2 rounded-xl font-bold hover:bg-slate-800 transition flex items-center gap-1">
+          📄 Descargar Extracto PDF
+        </button>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+        <h3 class="text-sm font-bold text-slate-700 mb-4">Comportamiento Financiero</h3>
+        <div style="position: relative; height: 220px; width: 100%;">
+          <canvas id="graficoHistorial"></canvas>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+        <h3 class="text-sm font-bold text-slate-700 mb-3">Historial de Quincenas</h3>
+        <div id="listaHistorial" class="space-y-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLANTILLA CONTROLADA PARA PDF -->
+  <div style="position: absolute; left: -9999px; top: -9999px;">
+    <div id="plantillaPDF" style="width: 700px; padding: 20px; background: white; font-family: sans-serif; color: #1e293b;">
+      <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
+        <div>
+          <h1 style="font-size: 22px; font-weight: 900; margin: 0; text-transform: uppercase;">Extracto Financiero</h1>
+          <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Reporte de Control Quincenal Personal</p>
+        </div>
+        <div style="text-align: right; font-size: 11px; color: #64748b;">
+          <p id="fechaPDF" style="margin: 0;"></p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0; text-align: center;">
+        <div>
+          <p style="font-size: 9px; text-transform: uppercase; font-weight: bold; color: #94a3b8; margin: 0;">Total Ingresado</p>
+          <p id="pdfTotalIngreso" style="font-size: 13px; font-weight: 900; margin: 2px 0 0 0; color: #0f172a;">$0</p>
+        </div>
+        <div>
+          <p style="font-size: 9px; text-transform: uppercase; font-weight: bold; color: #94a3b8; margin: 0;">Total Gastado</p>
+          <p id="pdfTotalGastos" style="font-size: 13px; font-weight: 900; margin: 2px 0 0 0; color: #dc2626;">$0</p>
+        </div>
+        <div>
+          <p style="font-size: 9px; text-transform: uppercase; font-weight: bold; color: #94a3b8; margin: 0;">Total Ahorrado</p>
+          <p id="pdfTotalAhorro" style="font-size: 13px; font-weight: 900; margin: 2px 0 0 0; color: #0284c7;">$0</p>
+        </div>
+        <div>
+          <p style="font-size: 9px; text-transform: uppercase; font-weight: bold; color: #94a3b8; margin: 0;">Saldo Libre</p>
+          <p id="pdfTotalDisponible" style="font-size: 13px; font-weight: 900; margin: 2px 0 0 0; color: #16a34a;">$0</p>
+        </div>
+      </div>
+
+      <h2 style="font-size: 11px; font-weight: bold; color: #334155; margin-bottom: 8px; text-transform: uppercase;">Detalle por Quincenas</h2>
+      <table style="width: 100%; font-size: 11px; text-align: left; border-collapse: collapse; margin-bottom: 20px;">
+        <thead>
+          <tr style="background: #0f172a; color: white;">
+            <th style="padding: 6px;">Fecha</th>
+            <th style="padding: 6px;">Ingreso</th>
+            <th style="padding: 6px;">Deudas</th>
+            <th style="padding: 6px;">Ahorro</th>
+            <th style="padding: 6px; text-align: right;">Disponible</th>
+          </tr>
+        </thead>
+        <tbody id="tablaPDFBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let gastos = [];
+    let historial = [];
+    let miGrafico = null;
+
+    async function registro() {
+      const e = document.getElementById('authEmail').value;
+      const p = document.getElementById('authPassword').value;
+      if(!e || !p) return alert("Por favor ingresa correo y contraseña");
+      try {
+        await window.createUserWithEmailAndPassword(window.auth, e, p);
+      } catch (err) { alert("Error en registro: " + err.message); }
+    }
+
+    async function login() {
+      const e = document.getElementById('authEmail').value;
+      const p = document.getElementById('authPassword').value;
+      if(!e || !p) return alert("Por favor ingresa correo y contraseña");
+      try {
+        await window.signInWithEmailAndPassword(window.auth, e, p);
+      } catch (err) { alert("Error al iniciar sesión: " + err.message); }
+    }
+
+    async function cerrarSesion() {
+      await window.signOut(window.auth);
+    }
+
+    async function sincronizarNube() {
+      const u = window.auth.currentUser;
+      if (!u) return;
+
+      const datos = {
+        ingreso: parseFloat(document.getElementById('ingreso').value) || 0,
+        ahorro: parseFloat(document.getElementById('ahorro').value) || 0,
+        gastos: gastos,
+        historial: historial
+      };
+
+      await window.setDoc(window.doc(window.db, "usuarios", u.uid), datos);
+    }
+
+    async function cargarDatosNube() {
+      const u = window.auth.currentUser;
+      if (!u) return;
+
+      const docRef = window.doc(window.db, "usuarios", u.uid);
+      const snap = await window.getDoc(docRef);
+
+      if (snap.exists()) {
+        const data = snap.data();
+        document.getElementById('ingreso').value = data.ingreso || '';
+        document.getElementById('ahorro').value = data.ahorro || '';
+        gastos = data.gastos || [];
+        historial = data.historial || [];
+      } else {
+        gastos = [];
+        historial = [];
+      }
+      guardarYRenderizar(false);
+    }
+
+    function cambiarVista(vista) {
+      const vActual = document.getElementById('vistaActual');
+      const vHistorial = document.getElementById('vistaHistorial');
+      const tabA = document.getElementById('tabActual');
+      const tabH = document.getElementById('tabHistorial');
+
+      if (vista === 'actual') {
+        vActual.classList.remove('hidden');
+        vHistorial.classList.add('hidden');
+        tabA.className = "w-1/2 py-2 rounded-lg bg-white shadow text-slate-800 transition";
+        tabH.className = "w-1/2 py-2 rounded-lg transition text-slate-500";
+      } else {
+        vActual.classList.add('hidden');
+        vHistorial.classList.remove('hidden');
+        tabH.className = "w-1/2 py-2 rounded-lg bg-white shadow text-slate-800 transition";
+        tabA.className = "w-1/2 py-2 rounded-lg transition text-slate-500";
+        setTimeout(() => { renderizarHistorialYGrafico(); }, 50);
+      }
+    }
+
+    function guardarYRenderizar(sincro = true) {
+      const lista = document.getElementById('listaGastos');
+      lista.innerHTML = '';
+
+      if (gastos.length === 0) {
+        lista.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs">Sin deudas registradas.</div>`;
+      }
+
+      let pagadosCount = 0;
+      gastos.forEach((gasto, index) => {
+        if (gasto.pagado) pagadosCount++;
+        const item = document.createElement('div');
+        item.className = `flex items-center justify-between p-3.5 rounded-2xl border ${gasto.pagado ? 'bg-emerald-50/60 border-emerald-200' : 'bg-white border-slate-200 shadow-sm'}`;
+        item.innerHTML = `
+          <div class="flex items-center gap-3">
+            <input type="checkbox" ${gasto.pagado ? 'checked' : ''} onchange="togglePago(${index})" class="w-5 h-5 accent-emerald-600 rounded">
+            <div>
+              <p class="text-sm font-bold ${gasto.pagado ? 'line-through text-slate-400' : 'text-slate-800'}">${gasto.nombre}</p>
+              <p class="text-xs font-semibold ${gasto.pagado ? 'text-emerald-700' : 'text-slate-500'}">$${Number(gasto.monto).toLocaleString()}</p>
+            </div>
+          </div>
+          <button onclick="eliminarGasto(${index})" class="text-slate-300 hover:text-red-500 font-bold p-1">✕</button>
+        `;
+        lista.appendChild(item);
+      });
+
+      document.getElementById('contadorPagados').innerText = `${pagadosCount}/${gastos.length} Pagados`;
+      calcularTotales();
+      if (sincro) sincronizarNube();
+    }
+
+    function agregarGasto() {
+      const nombre = document.getElementById('nombreGasto').value.trim();
+      const monto = parseFloat(document.getElementById('montoGasto').value);
+      if (nombre && !isNaN(monto) && monto > 0) {
+        gastos.push({ nombre, monto, pagado: false });
+        document.getElementById('nombreGasto').value = '';
+        document.getElementById('montoGasto').value = '';
+        guardarYRenderizar();
+      }
+    }
+
+    function togglePago(index) {
+      gastos[index].pagado = !gastos[index].pagado;
+      guardarYRenderizar();
+    }
+
+    function eliminarGasto(index) {
+      gastos.splice(index, 1);
+      guardarYRenderizar();
+    }
+
+    function calcularTotales() {
+      const ingreso = parseFloat(document.getElementById('ingreso').value) || 0;
+      const ahorro = parseFloat(document.getElementById('ahorro').value) || 0;
+      const totalGastos = gastos.reduce((acc, gasto) => acc + gasto.monto, 0);
+      const disponible = ingreso - (totalGastos + ahorro);
+
+      document.getElementById('totalGastos').innerText = `$${totalGastos.toLocaleString()}`;
+      document.getElementById('saldoDisponible').innerText = `$${disponible.toLocaleString()}`;
+    }
+
+    async function cerrarQuincena() {
+      const ingreso = parseFloat(document.getElementById('ingreso').value) || 0;
+      const ahorro = parseFloat(document.getElementById('ahorro').value) || 0;
+      const totalGastos = gastos.reduce((acc, gasto) => acc + gasto.monto, 0);
+
+      if (ingreso === 0 && gastos.length === 0 && ahorro === 0) {
+        alert("No hay datos cargados para guardar.");
+        return;
+      }
+
+      if (confirm("¿Quieres cerrar y guardar esta quincena en tu historial?")) {
+        const fecha = new Date().toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
+        historial.push({
+          fecha,
+          ingreso,
+          ahorro,
+          gastos: totalGastos,
+          disponible: ingreso - (totalGastos + ahorro)
+        });
+
+        gastos = [];
+        document.getElementById('ingreso').value = '';
+        document.getElementById('ahorro').value = '';
+        
+        guardarYRenderizar();
+        alert("¡Quincena guardada en la nube!");
+      }
+    }
+
+    function renderizarHistorialYGrafico() {
+      const contenedorLista = document.getElementById('listaHistorial');
+      contenedorLista.innerHTML = '';
+
+      if (historial.length === 0) {
+        contenedorLista.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Aún no has guardado ninguna quincena. Presiona 'Guardar' arriba para generar registros.</p>`;
+        return;
+      }
+
+      historial.slice().reverse().forEach(item => {
+        const div = document.createElement('div');
+        div.className = "p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1";
+        div.innerHTML = `
+          <div class="flex justify-between font-bold text-slate-700">
+            <span>${item.fecha}</span>
+            <span class="text-slate-500">Ingreso: $${item.ingreso.toLocaleString()}</span>
+          </div>
+          <div class="flex justify-between text-slate-600">
+            <span class="text-sky-600 font-semibold">🐖 Ahorro: $${item.ahorro.toLocaleString()}</span>
+            <span class="text-red-500 font-semibold">Deudas: $${item.gastos.toLocaleString()}</span>
+            <span class="text-emerald-600 font-bold">Libre: $${item.disponible.toLocaleString()}</span>
+          </div>
+        `;
+        contenedorLista.appendChild(div);
+      });
+
+      if (typeof Chart === 'undefined') return;
+
+      const canvas = document.getElementById('graficoHistorial');
+      const ctx = canvas.getContext('2d');
+      if (miGrafico) miGrafico.destroy();
+
+      miGrafico = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: historial.map(h => h.fecha),
+          datasets: [
+            { label: 'Deudas', data: historial.map(h => h.gastos), backgroundColor: '#f87171', borderRadius: 4 },
+            { label: 'Ahorro', data: historial.map(h => h.ahorro), backgroundColor: '#38bdf8', borderRadius: 4 },
+            { label: 'Libre', data: historial.map(h => h.disponible), backgroundColor: '#34d399', borderRadius: 4 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true } },
+          plugins: { legend: { position: 'bottom' } }
+        }
+      });
+    }
+
+    function descargarExtractoPDF() {
+      if (historial.length === 0) {
+        alert("Debes guardar al menos una quincena para poder generar el extracto en PDF.");
+        return;
+      }
+
+      const tIngreso = historial.reduce((acc, h) => acc + h.ingreso, 0);
+      const tGastos = historial.reduce((acc, h) => acc + h.gastos, 0);
+      const tAhorro = historial.reduce((acc, h) => acc + h.ahorro, 0);
+      const tDisponible = historial.reduce((acc, h) => acc + h.disponible, 0);
+
+      document.getElementById('fechaPDF').innerText = `Emitido: ${new Date().toLocaleDateString('es-ES')}`;
+      document.getElementById('pdfTotalIngreso').innerText = `$${tIngreso.toLocaleString()}`;
+      document.getElementById('pdfTotalGastos').innerText = `$${tGastos.toLocaleString()}`;
+      document.getElementById('pdfTotalAhorro').innerText = `$${tAhorro.toLocaleString()}`;
+      document.getElementById('pdfTotalDisponible').innerText = `$${tDisponible.toLocaleString()}`;
+
+      const tablaBody = document.getElementById('tablaPDFBody');
+      tablaBody.innerHTML = '';
+
+      historial.forEach(h => {
+        const row = document.createElement('tr');
+        row.style.borderBottom = "1px solid #e2e8f0";
+        row.innerHTML = `
+          <td style="padding: 6px; font-weight: bold;">${h.fecha}</td>
+          <td style="padding: 6px;">$${h.ingreso.toLocaleString()}</td>
+          <td style="padding: 6px; color: #dc2626;">$${h.gastos.toLocaleString()}</td>
+          <td style="padding: 6px; color: #0284c7;">$${h.ahorro.toLocaleString()}</td>
+          <td style="padding: 6px; color: #16a34a; font-weight: bold; text-align: right;">$${h.disponible.toLocaleString()}</td>
+        `;
+        tablaBody.appendChild(row);
+      });
+
+      const elemento = document.getElementById('plantillaPDF');
+      const opt = {
+        margin:       5,
+        filename:     `Extracto_Quincenal_${new Date().toISOString().slice(0,10)}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(elemento).save();
+    }
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.error(err));
+      });
+    }
+  </script>
+</body>
+</html>

@@ -73,11 +73,11 @@
       <div class="space-y-4">
         <div>
           <label class="text-xs font-bold text-slate-600">Correo Electrónico</label>
-          <input type="email" id="authEmail" class="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-slate-800 outline-none">
+          <input type="email" id="authEmail" placeholder="ejemplo@correo.com" class="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-slate-800 outline-none">
         </div>
         <div>
           <label class="text-xs font-bold text-slate-600">Contraseña</label>
-          <input type="password" id="authPassword" class="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-slate-800 outline-none">
+          <input type="password" id="authPassword" placeholder="******" class="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-slate-800 outline-none">
         </div>
 
         <button onclick="login()" class="w-full bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition">
@@ -86,13 +86,20 @@
         <button onclick="registro()" class="w-full bg-slate-200 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-300 transition">
           Crear Cuenta Nueva
         </button>
+
+        <!-- BOTÓN DESPLEGABLE PARA VER CÓMO FUNCIONA -->
+        <div class="pt-2">
+          <button onclick="togglePasoAPaso()" class="w-full py-2.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition flex items-center justify-center gap-2 border border-slate-200">
+            <span>📖</span> ¿Cómo funciona la App? (Ver guía)
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- PASO A PASO DE USO (ANTES DE INICIAR SESIÓN) -->
-    <div class="bg-white p-6 rounded-3xl shadow-md border border-slate-200">
+    <!-- PASO A PASO OCULTO POR DEFECTO -->
+    <div id="guiaPasoAPaso" class="hidden bg-white p-6 rounded-3xl shadow-md border border-slate-200">
       <h2 class="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
-        <span>📖</span> ¿Cómo funciona la App?
+        <span>📖</span> Guía de Uso Paso a Paso
       </h2>
 
       <div class="space-y-3 text-xs text-slate-600">
@@ -100,31 +107,31 @@
           <span class="bg-slate-900 text-white font-bold w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0">1</span>
           <div>
             <p class="font-bold text-slate-800">Crea tu cuenta gratis</p>
-            <p class="text-[11px] text-slate-500">Regístrate con tu correo y contraseña. Tus datos quedarán respaldados de forma privada en la nube.</p>
+            <p class="text-[11px] text-slate-500">Ingresa tu correo y contraseña, luego toca en <b>"Crear Cuenta Nueva"</b>. Tus registros se guardarán de forma privada.</p>
           </div>
         </div>
 
         <div class="flex items-start gap-3 p-2.5 bg-slate-50 rounded-xl border border-slate-100">
           <span class="bg-slate-900 text-white font-bold w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0">2</span>
           <div>
-            <p class="font-bold text-slate-800">Ingresa Saldo y Ahorro</p>
-            <p class="text-[11px] text-slate-500">Anota el monto de tu quincena y aparta una cantidad para tu ahorro quincenal.</p>
+            <p class="font-bold text-slate-800">Registra Ingreso y Ahorro</p>
+            <p class="text-[11px] text-slate-500">Anota el valor de tu quincena y aparta una cantidad para tu ahorro personal.</p>
           </div>
         </div>
 
         <div class="flex items-start gap-3 p-2.5 bg-slate-50 rounded-xl border border-slate-100">
           <span class="bg-slate-900 text-white font-bold w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0">3</span>
           <div>
-            <p class="font-bold text-slate-800">Registra Gastos y Deudas</p>
-            <p class="text-[11px] text-slate-500">Agrega tus facturas, compromisos o compras. El sistema restará todo automáticamente para darte tu dinero disponible real.</p>
+            <p class="font-bold text-slate-800">Agrega tus Gastos</p>
+            <p class="text-[11px] text-slate-500">Registra tus cobros, facturas o deudas. La app te mostrará inmediatamente tu saldo disponible real.</p>
           </div>
         </div>
 
         <div class="flex items-start gap-3 p-2.5 bg-slate-50 rounded-xl border border-slate-100">
           <span class="bg-slate-900 text-white font-bold w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0">4</span>
           <div>
-            <p class="font-bold text-slate-800">Guarda e Historial PDF</p>
-            <p class="text-[11px] text-slate-500">Haz clic en <b>💾 Guardar</b> al cerrar el periodo para generar gráficos de rendimiento y descargar extractos en PDF.</p>
+            <p class="font-bold text-slate-800">Guarda y Exporta</p>
+            <p class="text-[11px] text-slate-500">Al terminar el periodo haz clic en <b>💾 Guardar</b> para generar gráficos históricos y descargar reportes en PDF.</p>
           </div>
         </div>
       </div>
@@ -283,20 +290,27 @@
     let historial = [];
     let miGrafico = null;
 
+    function togglePasoAPaso() {
+      const g = document.getElementById('guiaPasoAPaso');
+      g.classList.toggle('hidden');
+    }
+
     async function registro() {
       const e = document.getElementById('authEmail').value.trim();
       const p = document.getElementById('authPassword').value;
 
-      if (!e || !p) return alert("Por favor ingresa correo y contraseña");
+      if (!e || !p) return alert("Por favor ingresa correo y contraseña.");
 
       try {
         await window.createUserWithEmailAndPassword(window.auth, e, p);
-        alert("¡Cuenta creada con éxito! Ya puedes usar la aplicación.");
+        alert("¡Cuenta creada con éxito! Ya estás dentro de la aplicación.");
       } catch (err) {
         if (err.code === 'auth/email-already-in-use') {
-          alert("Este correo ya está registrado. Haz clic en 'Iniciar Sesión'.");
+          alert("Este correo ya tiene una cuenta. Por favor haz clic en 'Iniciar Sesión'.");
         } else if (err.code === 'auth/weak-password') {
           alert("La contraseña debe tener al menos 6 caracteres.");
+        } else if (err.code === 'auth/invalid-email') {
+          alert("Por favor ingresa un correo electrónico válido.");
         } else {
           alert("Error en el registro: " + err.message);
         }
@@ -307,18 +321,20 @@
       const e = document.getElementById('authEmail').value.trim();
       const p = document.getElementById('authPassword').value;
 
-      if (!e || !p) return alert("Por favor ingresa correo y contraseña");
+      if (!e || !p) return alert("Por favor ingresa correo y contraseña.");
 
       try {
         await window.signInWithEmailAndPassword(window.auth, e, p);
       } catch (err) {
+        // En Firebase v10 los usuarios no registrados o datos incorrectos generan estos códigos
         if (
           err.code === 'auth/user-not-found' || 
-          err.code === 'auth/invalid-credential'
+          err.code === 'auth/invalid-credential' ||
+          err.code === 'auth/wrong-password'
         ) {
-          alert("Debes registrarte primero. Haz clic en 'Crear Cuenta Nueva'.");
-        } else if (err.code === 'auth/wrong-password') {
-          alert("Contraseña incorrecta. Inténtalo de nuevo.");
+          alert("⚠️ Esta cuenta no existe o la clave es incorrecta.\n\nSi es tu primera vez, haz clic en 'Crear Cuenta Nueva'.");
+        } else if (err.code === 'auth/invalid-email') {
+          alert("Por favor ingresa un correo electrónico válido.");
         } else {
           alert("Error al iniciar sesión: " + err.message);
         }
